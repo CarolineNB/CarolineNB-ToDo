@@ -36,7 +36,7 @@
             <li>
                 <input class="check-completed" data-id="{{d.id}}" type="checkbox" {% if d.completed %} checked {% endif %} /> 
                 {{d.description}}
-                <button>&cross;</button> 
+                <button class="remove" data-id="{{d.id}}">&cross;</button> 
             </li>
             {% endfor %}
         </ul>
@@ -64,6 +64,25 @@
                     })
                 }
             }
+            
+            const crossedout = document.querySelectorAll('.remove');
+            for (let i = 0; i < crossedout.length; i++){
+                const crossed = crossedout[i];
+                crossed.onclick = function(e) {
+                    const toRemove = e.target.dataset['id']
+                    fetch('/todos/' + toRemove + '/remove-item', {
+                        method: 'GET'
+                        })
+                    .then(function(){
+                        const item = e.target.parentElement;
+                        item.remove();
+                    })
+                    .catch(function(){
+                        document.getElementById('error').className = '';
+                    })
+                }
+            }
+
             document.getElementById('form').onsubmit = function(e) {
                 e.preventDefault();
                 fetch('/todos/create', {
@@ -79,10 +98,23 @@
                     return response.json();
                 })
                 .then(function(jsonResponse){
-                    console.log(jsonResponse);
-                    const liItem = document.createElement('LI');
-                    liItem.innerHTML = jsonResponse['description'];
-                    document.getElementById('todos').appendChild(liItem);
+                    const li = document.createElement('li');
+                    const checkbox = document.createElement('input');
+                    checkbox.className = 'check-completed';
+                    checkbox.type = 'checkbox';
+                    checkbox.setAttribute('data-id', jsonResponse.id);
+                    li.appendChild(checkbox);
+
+                    const text = document.createTextNode(' ' + jsonResponse.description);
+                    li.appendChild(text);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-button';
+                    deleteBtn.setAttribute('data-id', jsonResponse.id);
+                    deleteBtn.innerHTML = '&cross;';
+                    li.appendChild(deleteBtn);
+
+                    document.getElementById('todos').appendChild(li);
                     document.getElementById('error').className = 'hidden';
                 })
                 .catch(function(){
