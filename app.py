@@ -49,14 +49,14 @@ def create_todo():
 @app.route('/todos/<todo_id>/remove-item', methods=['GET'])
 def remove_item(todo_id):
     try:
-        Todo.query.filter_by(id=todo_id).delete()
+        todo_list = Todo.query.filter_by(id=todo_id).one()
+        db.session.delete(todo_list)
         db.session.commit()
     except:
-        error = True
         db.session.rollback()
     finally:
         db.session.close()
-    return redirect(url_for('index'))
+    return jsonify({ 'success': True})
 
 @app.route('/todos/<todo_id>/set-completed', methods=['POST'])
 def set_completed_todo(todo_id):
