@@ -15,10 +15,16 @@ class Todo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     description = db.Column(db.String(), nullable=False)
     completed = db.Column(db.Boolean, nullable=False, default=False)
+    list_id = db.Column(db.Integer, db.ForeignKey('todolists.id'), nullable=False)
 
     def __repr__(self):
         return f'<Todo {self.id} {self.description}>'
 
+class TodoList(db.Model):
+    __tablename__ = 'todolists'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(), nullable=False)
+    todos = db.relationship('Todo', backref='list', lazy=True)
 
 #db.create_all() #the tables are created for all the models that have been called
 
@@ -28,10 +34,14 @@ def create_todo():
     error = False
     body = {}
     try:
-        description = request.get_json()['description'] #the second value is default if empty
+        description = request.get_json()['description']
+        list_id = request.get_json()['list_id']
         todo = Todo(description=description)
+        active_list = TodoList.query.get(list_id)
+        todo.list = active_list
         db.session.add(todo)
         db.session.commit()
+        body['description'] = todo.description
         return jsonify({
             'description': todo.description
         })
@@ -72,8 +82,35 @@ def set_completed_todo(todo_id):
         db.session.close()
     return redirect(url_for('index'))
 
+@app.route('/lists/<list_id>')
+def get_list_todos(list_id):
+    return render_template('index.html', 
+    lists = TodoList.query.all(),
+    active_list = TodoList.query.get(list_id),
+    todos = Todo.query.filter_by(list_id=list_id).order_by('id')
+    .all()
+)
+
+@app.route('/lists/create', methods=['POST'])
+def create_list():
+    error = False
+    body = {}
+    try:
+        title = request.get_json()['title']
+        newList = TodoList(name=title)
+        db.session.add(newList)
+        db.session.commit()
+        return jsonify({
+            'title': newList.name,
+            'id' : newList.id
+        })
+    except:
+        error = True
+        db.session.rollback()
+    finally:
+        db.session.close()
+    return jsonify(body)
+
 @app.route('/')
 def index():
-    return render_template('index.html', data = Todo.query.all())
-
-
+    return redirect(url_for('get_list_todos', list_id=1))
